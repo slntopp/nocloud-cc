@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net"
-	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -68,36 +66,6 @@ func main() {
 		)),
 	)
 	proto.RegisterChatServiceServer(s, chats.NewChatsServer(log, db))
-
-	go func() {
-		for {
-			time.Sleep(time.Second * 10)
-			conn, err := grpc.Dial("localhost:8000", grpc.WithInsecure())
-			if err != nil {
-				fmt.Println("err")
-			}
-			client := proto.NewChatServiceClient(conn)
-			// _, err = client.SendMessage(context.TODO(), &proto.SendMessageRequest{
-			//   Message: &proto.ChatMessage{
-			//     Message: "Hello",
-			//   },
-			// })
-			_, err = client.GetChat(context.TODO(), &proto.GetChatRequest{
-				Uuid: "foo",
-			})
-			if err != nil {
-				fmt.Println(err)
-			}
-			_, err = client.SendChatMessage(context.TODO(), &proto.SendChatMessageRequest{
-				Message: &proto.ChatMessage{
-					Uuid: "foo",
-				},
-			})
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}()
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 
