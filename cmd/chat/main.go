@@ -9,7 +9,7 @@ import (
 	"github.com/slntopp/nocloud-cc/pkg/chats"
 	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -48,20 +48,26 @@ func main() {
 		_ = log.Sync()
 	}()
 
+	log.Info("Setting up DB Connection")
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	log.Info("DB connection established")
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	auth.SetContext(log, SIGNING_KEY)
+	// TODO Auth
+	// auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
-			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+			// grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-	proto.RegisterChatServiceServer(s, chats.NewChatsServer())
+	proto.RegisterChatServiceServer(s, chats.NewChatsServer(log, db))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
+
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
