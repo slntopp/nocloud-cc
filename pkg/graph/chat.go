@@ -37,6 +37,7 @@ type ChatsMessagesController struct {
 func NewChatsController(logger *zap.Logger, db driver.Database) ChatsController {
 	ctx := context.TODO()
 	log := logger.Named("ChatsController")
+	log.Info("Creating ChatsController")
 
 	graph := nograph.GraphGetEnsure(log, ctx, db, noschema.PERMISSIONS_GRAPH.Name)
 	col := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.CHATS_COL)
@@ -49,6 +50,7 @@ func NewChatsController(logger *zap.Logger, db driver.Database) ChatsController 
 func NewChatsMessagesController(logger *zap.Logger, db driver.Database) ChatsMessagesController {
 	ctx := context.TODO()
 	log := logger.Named("ChatsMessagesController")
+	log.Info("Creating ChatsMessagesController")
 
 	graph := nograph.GraphGetEnsure(log, ctx, db, noschema.PERMISSIONS_GRAPH.Name)
 	col := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.CHATS_MESSAGES_COL)
@@ -73,7 +75,18 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 	return &Chat{chat, meta}, nil
 }
 
+func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
+	logger := ctrl.log.Named("DeleteChat")
+	logger.Info("Deleting chat", zap.String("id", id))
+
+	_, err := ctrl.col.RemoveDocument(ctx, id)
+	return err
+}
+
 func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Chat, error) {
+	logger := ctrl.log.Named("CreatingChat")
+	logger.Info("Creating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
+
 	meta, err := ctrl.col.CreateDocument(ctx, chat)
 	if err != nil {
 		return nil, err
@@ -82,7 +95,19 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 	return &Chat{chat, meta}, nil
 }
 
+func (ctrl *ChatsController) Update(ctx context.Context, chat *chatpb.Chat) error {
+	logger := ctrl.log.Named("UpdateChat")
+	logger.Info("Updating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
+
+	_, err := ctrl.col.ReplaceDocument(ctx, chat.GetUuid(), chat)
+
+	return err
+}
+
 func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.ChatMessage) (*ChatMessage, error) {
+	logger := ctrl.log.Named("CreateChatMessage")
+	logger.Info("Creating message", zap.Any("message", msg))
+
 	meta, err := ctrl.col.CreateDocument(ctx, msg)
 	if err != nil {
 		return nil, err
@@ -103,4 +128,21 @@ func (ctrl *ChatsMessagesController) Get(ctx context.Context, id string) (ChatMe
 	msg.Uuid = meta.ID.Key()
 
 	return ChatMessage{&msg, meta}, nil
+}
+
+func (ctrl *ChatsMessagesController) Delete(ctx context.Context, id string) error {
+	logger := ctrl.log.Named("DeleteChatMessage")
+	logger.Info("Deleting message", zap.String("id", id))
+
+	_, err := ctrl.col.RemoveDocument(ctx, id)
+	return err
+}
+
+func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.ChatMessage) error {
+	logger := ctrl.log.Named("UpdateChatMessage")
+	logger.Info("Updating message", zap.String("id", msg.GetUuid()), zap.Any("message", msg))
+
+	_, err := ctrl.col.ReplaceDocument(ctx, msg.GetUuid(), msg)
+
+	return err
 }
