@@ -1,0 +1,100 @@
+syntax = "proto3";
+package nocloud.chats;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+message Chat{
+    string uuid = 1;
+    string owner = 2;
+}
+
+message ChatMessage{
+    string uuid = 1;
+    string from = 2;
+    string to = 3;
+    string message = 4;
+}
+
+message ChatMessageStreamRequest {
+    string uuid = 1;
+}
+message SendMessageRequest {
+    ChatMessage message = 1;
+}
+message DeleteMessageRequest {
+    string uuid = 1;
+}
+
+message CreateChatRequest {
+    Chat chat = 1;
+}
+message GetChatRequest {
+    string uuid = 1;
+}
+message DeleteChatRequest {
+    string uuid = 1;
+}
+
+message Response {}
+
+service ChatService {
+    rpc SendMessage(nocloud.chats.SendMessageRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            put: "/messages"
+            body: "*"
+        };
+    };
+
+    rpc DeleteMessage(nocloud.chats.DeleteMessageRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            delete: "/messages/{uuid}"
+        };
+    };
+
+    rpc UpdateMessage(nocloud.chats.ChatMessage) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            patch: "/messages"
+            body: "*"
+        };
+    };
+
+    rpc GetChat(nocloud.chats.GetChatRequest) 
+        returns (nocloud.chats.Chat) {
+        option (google.api.http) = {
+            get: "/chats/{uuid}"
+        };
+    };
+
+    rpc CreateChat(nocloud.chats.CreateChatRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            put: "/chats"
+            body: "*"
+        };
+    };
+
+    rpc DeleteChat(nocloud.chats.DeleteChatRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            delete: "/chats/{uuid}"
+        };
+    };
+
+    rpc UpdateChat(nocloud.chats.Chat) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            patch: "/chats"
+            body: "*"
+        };
+    };
+
+    rpc Stream(nocloud.chats.ChatMessageStreamRequest) returns (stream nocloud.chats.ChatMessage) {
+        option (google.api.http) = {
+            get: "/messages/{uuid}/stream"
+        };
+    };
+}
