@@ -19,10 +19,13 @@ message ChatMessage{
 message ChatMessageStreamRequest {
     string uuid = 1;
 }
-message SendMessageRequest {
+message SendChatMessageRequest {
     ChatMessage message = 1;
 }
-message DeleteMessageRequest {
+message DeleteChatMessageRequest {
+    string uuid = 1;
+}
+message GetChatMessageRequest {
     string uuid = 1;
 }
 
@@ -39,23 +42,30 @@ message DeleteChatRequest {
 message Response {}
 
 service ChatService {
-    rpc SendMessage(nocloud.chats.SendMessageRequest) 
-        returns (nocloud.chats.Response) {
+    rpc SendChatMessage(nocloud.chats.SendChatMessageRequest) 
+        returns (nocloud.chats.ChatMessage) {
         option (google.api.http) = {
             put: "/messages"
             body: "*"
         };
     };
 
-    rpc DeleteMessage(nocloud.chats.DeleteMessageRequest) 
+    rpc GetChatMessage(nocloud.chats.GetChatMessageRequest) 
+        returns (nocloud.chats.ChatMessage) {
+        option (google.api.http) = {
+            get: "/messages/{uuid}"
+        };
+    };
+
+    rpc DeleteChatMessage(nocloud.chats.DeleteChatMessageRequest) 
         returns (nocloud.chats.Response) {
         option (google.api.http) = {
             delete: "/messages/{uuid}"
         };
     };
 
-    rpc UpdateMessage(nocloud.chats.ChatMessage) 
-        returns (nocloud.chats.Response) {
+    rpc UpdateChatMessage(nocloud.chats.ChatMessage) 
+        returns (nocloud.chats.ChatMessage) {
         option (google.api.http) = {
             patch: "/messages"
             body: "*"
@@ -70,7 +80,7 @@ service ChatService {
     };
 
     rpc CreateChat(nocloud.chats.CreateChatRequest) 
-        returns (nocloud.chats.Response) {
+        returns (nocloud.chats.Chat) {
         option (google.api.http) = {
             put: "/chats"
             body: "*"
@@ -85,7 +95,7 @@ service ChatService {
     };
 
     rpc UpdateChat(nocloud.chats.Chat) 
-        returns (nocloud.chats.Response) {
+        returns (nocloud.chats.Chat) {
         option (google.api.http) = {
             patch: "/chats"
             body: "*"

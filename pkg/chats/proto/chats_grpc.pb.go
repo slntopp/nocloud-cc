@@ -22,13 +22,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
-	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*Response, error)
-	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*Response, error)
-	UpdateMessage(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*Response, error)
+	SendChatMessage(ctx context.Context, in *SendChatMessageRequest, opts ...grpc.CallOption) (*ChatMessage, error)
+	GetChatMessage(ctx context.Context, in *GetChatMessageRequest, opts ...grpc.CallOption) (*ChatMessage, error)
+	DeleteChatMessage(ctx context.Context, in *DeleteChatMessageRequest, opts ...grpc.CallOption) (*Response, error)
+	UpdateChatMessage(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*ChatMessage, error)
 	GetChat(ctx context.Context, in *GetChatRequest, opts ...grpc.CallOption) (*Chat, error)
-	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*Response, error)
+	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*Chat, error)
 	DeleteChat(ctx context.Context, in *DeleteChatRequest, opts ...grpc.CallOption) (*Response, error)
-	UpdateChat(ctx context.Context, in *Chat, opts ...grpc.CallOption) (*Response, error)
+	UpdateChat(ctx context.Context, in *Chat, opts ...grpc.CallOption) (*Chat, error)
 	Stream(ctx context.Context, in *ChatMessageStreamRequest, opts ...grpc.CallOption) (ChatService_StreamClient, error)
 }
 
@@ -40,27 +41,36 @@ func NewChatServiceClient(cc grpc.ClientConnInterface) ChatServiceClient {
 	return &chatServiceClient{cc}
 }
 
-func (c *chatServiceClient) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/SendMessage", in, out, opts...)
+func (c *chatServiceClient) SendChatMessage(ctx context.Context, in *SendChatMessageRequest, opts ...grpc.CallOption) (*ChatMessage, error) {
+	out := new(ChatMessage)
+	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/SendChatMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chatServiceClient) DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/DeleteMessage", in, out, opts...)
+func (c *chatServiceClient) GetChatMessage(ctx context.Context, in *GetChatMessageRequest, opts ...grpc.CallOption) (*ChatMessage, error) {
+	out := new(ChatMessage)
+	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/GetChatMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chatServiceClient) UpdateMessage(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*Response, error) {
+func (c *chatServiceClient) DeleteChatMessage(ctx context.Context, in *DeleteChatMessageRequest, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/UpdateMessage", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/DeleteChatMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateChatMessage(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*ChatMessage, error) {
+	out := new(ChatMessage)
+	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/UpdateChatMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +86,8 @@ func (c *chatServiceClient) GetChat(ctx context.Context, in *GetChatRequest, opt
 	return out, nil
 }
 
-func (c *chatServiceClient) CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
+func (c *chatServiceClient) CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*Chat, error) {
+	out := new(Chat)
 	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/CreateChat", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -94,8 +104,8 @@ func (c *chatServiceClient) DeleteChat(ctx context.Context, in *DeleteChatReques
 	return out, nil
 }
 
-func (c *chatServiceClient) UpdateChat(ctx context.Context, in *Chat, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
+func (c *chatServiceClient) UpdateChat(ctx context.Context, in *Chat, opts ...grpc.CallOption) (*Chat, error) {
+	out := new(Chat)
 	err := c.cc.Invoke(ctx, "/nocloud.chats.ChatService/UpdateChat", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -139,13 +149,14 @@ func (x *chatServiceStreamClient) Recv() (*ChatMessage, error) {
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility
 type ChatServiceServer interface {
-	SendMessage(context.Context, *SendMessageRequest) (*Response, error)
-	DeleteMessage(context.Context, *DeleteMessageRequest) (*Response, error)
-	UpdateMessage(context.Context, *ChatMessage) (*Response, error)
+	SendChatMessage(context.Context, *SendChatMessageRequest) (*ChatMessage, error)
+	GetChatMessage(context.Context, *GetChatMessageRequest) (*ChatMessage, error)
+	DeleteChatMessage(context.Context, *DeleteChatMessageRequest) (*Response, error)
+	UpdateChatMessage(context.Context, *ChatMessage) (*ChatMessage, error)
 	GetChat(context.Context, *GetChatRequest) (*Chat, error)
-	CreateChat(context.Context, *CreateChatRequest) (*Response, error)
+	CreateChat(context.Context, *CreateChatRequest) (*Chat, error)
 	DeleteChat(context.Context, *DeleteChatRequest) (*Response, error)
-	UpdateChat(context.Context, *Chat) (*Response, error)
+	UpdateChat(context.Context, *Chat) (*Chat, error)
 	Stream(*ChatMessageStreamRequest, ChatService_StreamServer) error
 	mustEmbedUnimplementedChatServiceServer()
 }
@@ -154,25 +165,28 @@ type ChatServiceServer interface {
 type UnimplementedChatServiceServer struct {
 }
 
-func (UnimplementedChatServiceServer) SendMessage(context.Context, *SendMessageRequest) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+func (UnimplementedChatServiceServer) SendChatMessage(context.Context, *SendChatMessageRequest) (*ChatMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendChatMessage not implemented")
 }
-func (UnimplementedChatServiceServer) DeleteMessage(context.Context, *DeleteMessageRequest) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteMessage not implemented")
+func (UnimplementedChatServiceServer) GetChatMessage(context.Context, *GetChatMessageRequest) (*ChatMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChatMessage not implemented")
 }
-func (UnimplementedChatServiceServer) UpdateMessage(context.Context, *ChatMessage) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateMessage not implemented")
+func (UnimplementedChatServiceServer) DeleteChatMessage(context.Context, *DeleteChatMessageRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteChatMessage not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateChatMessage(context.Context, *ChatMessage) (*ChatMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateChatMessage not implemented")
 }
 func (UnimplementedChatServiceServer) GetChat(context.Context, *GetChatRequest) (*Chat, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChat not implemented")
 }
-func (UnimplementedChatServiceServer) CreateChat(context.Context, *CreateChatRequest) (*Response, error) {
+func (UnimplementedChatServiceServer) CreateChat(context.Context, *CreateChatRequest) (*Chat, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateChat not implemented")
 }
 func (UnimplementedChatServiceServer) DeleteChat(context.Context, *DeleteChatRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteChat not implemented")
 }
-func (UnimplementedChatServiceServer) UpdateChat(context.Context, *Chat) (*Response, error) {
+func (UnimplementedChatServiceServer) UpdateChat(context.Context, *Chat) (*Chat, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateChat not implemented")
 }
 func (UnimplementedChatServiceServer) Stream(*ChatMessageStreamRequest, ChatService_StreamServer) error {
@@ -191,56 +205,74 @@ func RegisterChatServiceServer(s grpc.ServiceRegistrar, srv ChatServiceServer) {
 	s.RegisterService(&ChatService_ServiceDesc, srv)
 }
 
-func _ChatService_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendMessageRequest)
+func _ChatService_SendChatMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendChatMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServiceServer).SendMessage(ctx, in)
+		return srv.(ChatServiceServer).SendChatMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.chats.ChatService/SendMessage",
+		FullMethod: "/nocloud.chats.ChatService/SendChatMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).SendMessage(ctx, req.(*SendMessageRequest))
+		return srv.(ChatServiceServer).SendChatMessage(ctx, req.(*SendChatMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatService_DeleteMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteMessageRequest)
+func _ChatService_GetChatMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServiceServer).DeleteMessage(ctx, in)
+		return srv.(ChatServiceServer).GetChatMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.chats.ChatService/DeleteMessage",
+		FullMethod: "/nocloud.chats.ChatService/GetChatMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).DeleteMessage(ctx, req.(*DeleteMessageRequest))
+		return srv.(ChatServiceServer).GetChatMessage(ctx, req.(*GetChatMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatService_UpdateMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ChatService_DeleteChatMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteChatMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).DeleteChatMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.chats.ChatService/DeleteChatMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).DeleteChatMessage(ctx, req.(*DeleteChatMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateChatMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChatMessage)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServiceServer).UpdateMessage(ctx, in)
+		return srv.(ChatServiceServer).UpdateChatMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.chats.ChatService/UpdateMessage",
+		FullMethod: "/nocloud.chats.ChatService/UpdateChatMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).UpdateMessage(ctx, req.(*ChatMessage))
+		return srv.(ChatServiceServer).UpdateChatMessage(ctx, req.(*ChatMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -346,16 +378,20 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ChatServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SendMessage",
-			Handler:    _ChatService_SendMessage_Handler,
+			MethodName: "SendChatMessage",
+			Handler:    _ChatService_SendChatMessage_Handler,
 		},
 		{
-			MethodName: "DeleteMessage",
-			Handler:    _ChatService_DeleteMessage_Handler,
+			MethodName: "GetChatMessage",
+			Handler:    _ChatService_GetChatMessage_Handler,
 		},
 		{
-			MethodName: "UpdateMessage",
-			Handler:    _ChatService_UpdateMessage_Handler,
+			MethodName: "DeleteChatMessage",
+			Handler:    _ChatService_DeleteChatMessage_Handler,
+		},
+		{
+			MethodName: "UpdateChatMessage",
+			Handler:    _ChatService_UpdateChatMessage_Handler,
 		},
 		{
 			MethodName: "GetChat",
