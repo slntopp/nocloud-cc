@@ -17,9 +17,11 @@ type Chat struct {
 	driver.DocumentMeta
 }
 type ChatsController struct {
-	log   *zap.Logger
-	col   driver.Collection
-	graph driver.Graph
+	log     *zap.Logger
+	db      driver.Database
+	col     driver.Collection
+	graph   driver.Graph
+	ns2chts driver.Collection
 }
 
 type ChatMessage struct {
@@ -29,8 +31,10 @@ type ChatMessage struct {
 
 type ChatsMessagesController struct {
 	log     *zap.Logger
+	db      driver.Database
 	col     driver.Collection
 	cht2msg driver.Collection
+	ns2msg  driver.Collection
 	graph   driver.Graph
 }
 
@@ -44,7 +48,9 @@ func NewChatsController(logger *zap.Logger, db driver.Database) ChatsController 
 
 	nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.NS2CHTS, noschema.NAMESPACES_COL, schema.CHATS_COL)
 
-	return ChatsController{log: log, col: col, graph: graph}
+	ns2chts := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.NS2CHTS, noschema.NAMESPACES_COL, schema.CHATS_COL)
+
+	return ChatsController{log: log, col: col, graph: graph, ns2chts: ns2chts, db: db}
 }
 
 func NewChatsMessagesController(logger *zap.Logger, db driver.Database) ChatsMessagesController {
@@ -56,11 +62,12 @@ func NewChatsMessagesController(logger *zap.Logger, db driver.Database) ChatsMes
 	col := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.CHATS_MESSAGES_COL)
 
 	cht2msg := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.CHT2MSG, schema.CHATS_COL, schema.CHATS_MESSAGES_COL)
+	ns2msg := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.NS2MSG, noschema.NAMESPACES_COL, schema.CHATS_MESSAGES_COL)
 
-	return ChatsMessagesController{log: log, col: col, cht2msg: cht2msg, graph: graph}
+	return ChatsMessagesController{log: log, col: col, cht2msg: cht2msg, graph: graph, ns2msg: ns2msg, db: db}
 }
 
-// Get Chat by id the database
+// Get Chat by id from the database
 func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) {
 	logger := ctrl.log.Named("GetChat")
 	logger.Info("Getting chat", zap.String("id", id))
@@ -71,6 +78,9 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 		return nil, err
 	}
 	chat.Uuid = meta.ID.Key()
+
+	// requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	// ok := graph.HasAccess(ctx, ctrl.db, requestor, ns.ID.String(), access.ADMIN)
 
 	return &Chat{chat, meta}, nil
 }
@@ -91,7 +101,19 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 	if err != nil {
 		return nil, err
 	}
+	// TODO create chat namespace
+
 	chat.Uuid = meta.ID.Key()
+
+	_, err = ctrl.ns2chts.CreateDocument(ctx, nograph.Access{
+		From: driver.DocumentID(chat.Owner), To: driver.DocumentID(chat.Uuid),
+		// Edit access for own messages
+		Level: 3,
+	})
+	if err != nil {
+		logger.Warn("Could not link namespace and chat", zap.String("chat", chat.Uuid), zap.String("namespace", chat.Owner))
+	}
+
 	return &Chat{chat, meta}, nil
 }
 
@@ -113,6 +135,27 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 		return nil, err
 	}
 	msg.Uuid = meta.ID.Key()
+
+	// TODO create personal namespace
+
+	_, err = ctrl.cht2msg.CreateDocument(ctx, nograph.Access{
+		From: driver.DocumentID(msg.To), To: driver.DocumentID(msg.Uuid),
+		// Read only access for all chat members
+		Level: 1,
+	})
+	if err != nil {
+		logger.Warn("Could not link chat and message", zap.String("chat", msg.To), zap.String("message", msg.Uuid))
+	}
+
+	_, err = ctrl.ns2msg.CreateDocument(ctx, nograph.Access{
+		From: driver.DocumentID(msg.From), To: driver.DocumentID(msg.Uuid),
+		// Edit access for own messages
+		Level: 3,
+	})
+	if err != nil {
+		logger.Warn("Could not link namespace and message", zap.String("chat", msg.From), zap.String("message", msg.Uuid))
+	}
+
 	return &ChatMessage{msg, meta}, nil
 }
 
