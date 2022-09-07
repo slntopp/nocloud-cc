@@ -7,8 +7,7 @@ import "google/protobuf/struct.proto";
 message Chat{
     string uuid = 1;
     string owner = 2;
-    string namespace = 3;
-    string title = 4;
+    string title = 3;
 }
 
 message ChatMessage{
