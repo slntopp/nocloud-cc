@@ -7,6 +7,8 @@ import "google/protobuf/struct.proto";
 message Chat{
     string uuid = 1;
     string owner = 2;
+    string namespace = 3;
+    string title = 4;
 }
 
 message ChatMessage{
@@ -28,7 +30,17 @@ message DeleteChatMessageRequest {
 message GetChatMessageRequest {
     string uuid = 1;
 }
+message ListChatMessagesRequest {
+    string chatUuid = 1;
+}
+message ListChatMessagesResponse {
+    repeated ChatMessage messages = 1;
+}
 
+message InviteChatRequest {
+    string chatUuid = 1;
+    string userUuid = 2;
+}
 message CreateChatRequest {
     Chat chat = 1;
 }
@@ -47,6 +59,12 @@ service ChatService {
         option (google.api.http) = {
             put: "/messages"
             body: "*"
+        };
+    };
+    rpc ListChatMessages(nocloud.chats.ListChatMessagesRequest) 
+        returns (nocloud.chats.ListChatMessagesResponse) {
+        option (google.api.http) = {
+            get: "/chats/{chatUuid}/messages"
         };
     };
 
@@ -76,6 +94,14 @@ service ChatService {
         returns (nocloud.chats.Chat) {
         option (google.api.http) = {
             get: "/chats/{uuid}"
+        };
+    };
+
+    rpc Invite(nocloud.chats.InviteChatRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            post: "/chats/invite"
+            body: "*"
         };
     };
 
