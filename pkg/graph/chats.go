@@ -84,11 +84,12 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 	}
 	chat.Uuid = meta.ID.Key()
 
-	if ctrl.HasAccess(ctx, requestor, id, access.READ) {
-		return &Chat{chat, meta}, nil
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, id, access.READ) {
+		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
-	return nil, status.Error(codes.PermissionDenied, "Permission Denied")
+	return &Chat{chat, meta}, nil
+
 }
 
 func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
@@ -96,11 +97,11 @@ func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
 	logger.Info("Deleting chat", zap.String("id", id))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if ctrl.HasAccess(ctx, requestor, id, access.MGMT) {
-		_, err := ctrl.col.RemoveDocument(ctx, id)
-		return err
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, id, access.MGMT) {
+		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
-	return status.Error(codes.PermissionDenied, "Permission Denied")
+
+	return nil
 }
 
 func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Chat, error) {
@@ -118,11 +119,12 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 	chat.Uuid = meta.ID.Key()
 
 	_, err = ctrl.acc2chts.CreateDocument(ctx, nograph.Access{
-		From: driver.DocumentID(requestor), To: driver.DocumentID(chat.Uuid),
+		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, requestor),
+		To:    driver.NewDocumentID(schema.CHATS_COL, chat.Uuid),
 		Level: access.MGMT,
 	})
 	if err != nil {
-		logger.Warn("Could not link account and chat", zap.String("chat", chat.Uuid), zap.String("account", requestor))
+		logger.Warn("Could not link account and chat", zap.String("chat", chat.Uuid), zap.String("account", requestor), zap.Error(err))
 	}
 
 	return &Chat{chat, meta}, nil
@@ -134,21 +136,45 @@ func (ctrl *ChatsController) Update(ctx context.Context, chat *chatpb.Chat) erro
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if ctrl.HasAccess(ctx, requestor, chat.GetUuid(), access.MGMT) {
-		_, err := ctrl.col.ReplaceDocument(ctx, chat.GetUuid(), chat)
-		return err
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, chat.GetUuid(), access.MGMT) {
+		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
-	return status.Error(codes.PermissionDenied, "Permission Denied")
+	_, err := ctrl.col.ReplaceDocument(ctx, chat.GetUuid(), chat)
+	return err
 }
 
-// TODO forbid users to write to uninvited chats
+func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *chatpb.InviteChatRequest) error {
+	logger := ctrl.log.Named("InviteUser")
+	logger.Info("Inviting user to chat", zap.String("chat", invite.GetChatUuid()), zap.String("user", invite.GetUserUuid()))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
+		requestor, invite.GetChatUuid(), access.READ) {
+		return status.Error(codes.PermissionDenied, "Permission Denied")
+	}
+
+	_, err := ctrl.acc2chts.CreateDocument(ctx, nograph.Access{
+		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, invite.GetUserUuid()),
+		To:    driver.NewDocumentID(schema.CHATS_COL, invite.GetChatUuid()),
+		Level: access.READ,
+	})
+
+	return err
+}
+
 func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.ChatMessage) (*ChatMessage, error) {
 	logger := ctrl.log.Named("CreateChatMessage")
 	logger.Info("Creating message", zap.Any("message", msg))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	msg.From = requestor
+
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
+		requestor, msg.GetTo(), access.READ) {
+		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
+	}
 
 	meta, err := ctrl.col.CreateDocument(ctx, msg)
 	if err != nil {
@@ -157,7 +183,8 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 	msg.Uuid = meta.ID.Key()
 
 	_, err = ctrl.cht2msg.CreateDocument(ctx, nograph.Access{
-		From: driver.DocumentID(msg.To), To: driver.DocumentID(msg.Uuid),
+		From:  driver.NewDocumentID(schema.CHATS_COL, msg.GetTo()),
+		To:    driver.NewDocumentID(schema.CHATS_MESSAGES_COL, msg.Uuid),
 		Level: access.READ,
 	})
 	if err != nil {
@@ -165,7 +192,8 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 	}
 
 	_, err = ctrl.acc2msg.CreateDocument(ctx, nograph.Access{
-		From: driver.DocumentID(requestor), To: driver.DocumentID(msg.Uuid),
+		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, requestor),
+		To:    driver.NewDocumentID(schema.CHATS_MESSAGES_COL, msg.Uuid),
 		Level: access.MGMT,
 	})
 	if err != nil {
@@ -181,18 +209,18 @@ func (ctrl *ChatsMessagesController) Get(ctx context.Context, id string) (*ChatM
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
+		requestor, id, access.READ) {
+		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
+	}
 	msg := &chatpb.ChatMessage{}
 	meta, err := ctrl.col.ReadDocument(ctx, id, msg)
 	if err != nil {
-		return &ChatMessage{}, err
+		return nil, err
 	}
+
 	msg.Uuid = meta.ID.Key()
-
-	if ctrl.HasAccess(ctx, requestor, id, access.READ) {
-		return &ChatMessage{msg, meta}, nil
-	}
-
-	return nil, status.Error(codes.PermissionDenied, "Permission Denied")
+	return &ChatMessage{msg, meta}, nil
 }
 
 func (ctrl *ChatsMessagesController) Delete(ctx context.Context, id string) error {
@@ -201,12 +229,12 @@ func (ctrl *ChatsMessagesController) Delete(ctx context.Context, id string) erro
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if ctrl.HasAccess(ctx, requestor, id, access.MGMT) {
-		_, err := ctrl.col.RemoveDocument(ctx, id)
-		return err
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
+		requestor, id, access.MGMT) {
+		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
-
-	return status.Error(codes.PermissionDenied, "Permission Denied")
+	_, err := ctrl.col.RemoveDocument(ctx, id)
+	return err
 }
 
 func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.ChatMessage) error {
@@ -215,10 +243,11 @@ func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.Cha
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if ctrl.HasAccess(ctx, requestor, msg.GetUuid(), access.MGMT) {
-		_, err := ctrl.col.ReplaceDocument(ctx, msg.GetUuid(), msg)
-		return err
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
+		requestor, msg.GetUuid(), access.MGMT) {
+		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
-	return status.Error(codes.PermissionDenied, "Permission Denied")
+	_, err := ctrl.col.ReplaceDocument(ctx, msg.GetUuid(), msg)
+	return err
 }

@@ -2,22 +2,40 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud-cc/pkg/schema"
-	"github.com/slntopp/nocloud/pkg/graph"
+	nograph "github.com/slntopp/nocloud/pkg/graph"
 )
 
-func hasAccess(ctx context.Context, account string, node string, level int32, db driver.Database, col string) bool {
-	key := fmt.Sprintf("%s/0", col)
-	return graph.HasAccess(ctx, db, account, key, level)
-}
+const edgeQuery = `
+FOR edge IN @@collection
+    FILTER edge._from == @fromDocID && edge._to == @toDocID
+    LIMIT 1
+    RETURN edge
+`
 
-func (ctrl *ChatsController) HasAccess(ctx context.Context, account string, node string, level int32) bool {
-	return hasAccess(ctx, account, node, level, ctrl.db, schema.CHATS_COL)
-}
+func HasAccess(ctx context.Context, db driver.Database, collection, fromKey, toKey string, level int32) bool {
+	collections := strings.Split(collection, "2")
+	if len(collections) != 2 {
+		return false
+	}
 
-func (ctrl *ChatsMessagesController) HasAccess(ctx context.Context, account string, node string, level int32) bool {
-	return hasAccess(ctx, account, node, level, ctrl.db, schema.CHATS_MESSAGES_COL)
+	fromDocID := driver.NewDocumentID(collections[0], fromKey)
+	toDocID := driver.NewDocumentID(collections[1], toKey)
+
+	c, err := db.Query(ctx, edgeQuery, map[string]interface{}{
+		"@collection": collection,
+		"fromDocID":   fromDocID,
+		"toDocID":     toDocID,
+	})
+	if err != nil {
+		return false
+	}
+	defer c.Close()
+
+	access := &nograph.Access{}
+	c.ReadDocument(ctx, access)
+
+	return access.Level >= level
 }

@@ -11,17 +11,9 @@ import (
 
 type ChatsServiceServer struct {
 	pb.UnimplementedChatServiceServer
-	cht_ctrl    graph.ChatsController
-	msg_ctrl    graph.ChatsMessagesController
-	log         *zap.Logger
-	connections []*Connection
-}
-
-type Connection struct {
-	stream pb.ChatService_StreamServer
-	id     string
-	active bool
-	error  chan error
+	cht_ctrl graph.ChatsController
+	msg_ctrl graph.ChatsMessagesController
+	log      *zap.Logger
 }
 
 func NewChatsServer(log *zap.Logger, db driver.Database) *ChatsServiceServer {
@@ -29,6 +21,7 @@ func NewChatsServer(log *zap.Logger, db driver.Database) *ChatsServiceServer {
 	chatsController := graph.NewChatsController(logger, db)
 	messagesController := graph.NewChatsMessagesController(logger, db)
 	return &ChatsServiceServer{
+		log:      logger,
 		cht_ctrl: chatsController,
 		msg_ctrl: messagesController,
 	}
@@ -106,17 +99,17 @@ func (s *ChatsServiceServer) UpdateChatMessage(ctx context.Context, msg *pb.Chat
 	return msg, nil
 }
 
+func (s *ChatsServiceServer) Invite(ctx context.Context, req *pb.InviteChatRequest) (*pb.Response, error) {
+	s.log.Info("Got Invite Request", zap.Any("request", req))
+	err := s.cht_ctrl.InviteUser(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.Response{}, nil
+}
+
 func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.ChatService_StreamServer) error {
 	s.log.Info("Got ChatMessageStream Request", zap.Any("request", req))
 
-	conn := &Connection{
-		stream: stream,
-		id:     "TODO",
-		active: true,
-		error:  make(chan error),
-	}
-
-	s.connections = append(s.connections, conn)
-
-	return <-conn.error
+	return nil
 }

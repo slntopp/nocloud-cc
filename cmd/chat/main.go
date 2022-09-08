@@ -8,8 +8,8 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud-cc/pkg/chats"
 	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
-	"github.com/slntopp/nocloud/pkg/edge/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -48,7 +48,6 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
-
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
