@@ -107,6 +107,14 @@ func (s *ChatsServiceServer) Invite(ctx context.Context, req *pb.InviteChatReque
 	}
 	return &pb.Response{}, nil
 }
+func (s *ChatsServiceServer) ListChatMessages(ctx context.Context, req *pb.ListChatMessagesRequest) (*pb.ListChatMessagesResponse, error) {
+	s.log.Info("Got List Messages Request", zap.Any("request", req))
+	messages, err := s.msg_ctrl.List(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ListChatMessagesResponse{Messages: messages}, nil
+}
 
 func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.ChatService_StreamServer) error {
 	s.log.Info("Got ChatMessageStream Request", zap.Any("request", req))

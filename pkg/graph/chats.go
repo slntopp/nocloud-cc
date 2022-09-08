@@ -101,7 +101,9 @@ func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
-	return nil
+	_, err := ctrl.col.RemoveDocument(ctx, id)
+
+	return err
 }
 
 func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Chat, error) {
@@ -250,4 +252,47 @@ func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.Cha
 
 	_, err := ctrl.col.ReplaceDocument(ctx, msg.GetUuid(), msg)
 	return err
+}
+
+var listQuery = `
+FOR message IN @@collection 
+    FILTER message.to == @chat 
+    RETURN message`
+
+func (ctrl *ChatsMessagesController) List(ctx context.Context, req *chatpb.ListChatMessagesRequest) ([]*chatpb.ChatMessage, error) {
+	logger := ctrl.log.Named("ListChatMessages")
+	logger.Info("Fetching messages", zap.String("chat", req.GetChatUuid()))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
+		requestor, req.GetChatUuid(), access.READ) {
+		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
+	}
+
+	c, err := ctrl.db.Query(ctx, listQuery, map[string]interface{}{
+		"chat":        req.GetChatUuid(),
+		"@collection": schema.CHATS_MESSAGES_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	messages := []*proto.ChatMessage{}
+	for {
+		message := &proto.ChatMessage{}
+		_, err = c.ReadDocument(ctx, message)
+
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			ctrl.log.Error("Failed to fetch messages from chat", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to fetch messages from chat")
+		} else {
+			messages = append(messages, message)
+		}
+	}
+
+	return messages, nil
 }
