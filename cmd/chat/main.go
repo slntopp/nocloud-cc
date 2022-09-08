@@ -8,6 +8,7 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud-cc/pkg/chats"
 	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
+	"github.com/slntopp/nocloud/pkg/edge/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
@@ -57,12 +58,11 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	// TODO Auth
-	// auth.SetContext(log, SIGNING_KEY)
+	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
-			// grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
 	proto.RegisterChatServiceServer(s, chats.NewChatsServer(log, db))
