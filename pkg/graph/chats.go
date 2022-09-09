@@ -37,7 +37,6 @@ type ChatsMessagesController struct {
 	log     *zap.Logger
 	db      driver.Database
 	col     driver.Collection
-	cht2msg driver.Collection
 	acc2msg driver.Collection
 	graph   driver.Graph
 }
@@ -65,10 +64,9 @@ func NewChatsMessagesController(logger *zap.Logger, db driver.Database) ChatsMes
 	graph := nograph.GraphGetEnsure(log, ctx, db, noschema.PERMISSIONS_GRAPH.Name)
 	col := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.CHATS_MESSAGES_COL)
 
-	cht2msg := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.CHT2MSG, schema.CHATS_COL, schema.CHATS_MESSAGES_COL)
 	acc2msg := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2MSG, noschema.ACCOUNTS_COL, schema.CHATS_MESSAGES_COL)
 
-	return ChatsMessagesController{log: log, col: col, cht2msg: cht2msg, graph: graph, acc2msg: acc2msg, db: db}
+	return ChatsMessagesController{log: log, col: col, graph: graph, acc2msg: acc2msg, db: db}
 }
 
 // Get Chat by id from the database
@@ -183,16 +181,7 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 		return nil, err
 	}
 	msg.Uuid = meta.ID.Key()
-
-	_, err = ctrl.cht2msg.CreateDocument(ctx, nograph.Access{
-		From:  driver.NewDocumentID(schema.CHATS_COL, msg.GetTo()),
-		To:    driver.NewDocumentID(schema.CHATS_MESSAGES_COL, msg.Uuid),
-		Level: access.READ,
-	})
-	if err != nil {
-		logger.Warn("Could not link chat and message", zap.String("chat", msg.To), zap.String("message", msg.Uuid))
-	}
-
+    
 	_, err = ctrl.acc2msg.CreateDocument(ctx, nograph.Access{
 		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, requestor),
 		To:    driver.NewDocumentID(schema.CHATS_MESSAGES_COL, msg.Uuid),
