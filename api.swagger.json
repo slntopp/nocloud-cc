@@ -365,9 +365,6 @@
         "uuid": {
           "type": "string"
         },
-        "owner": {
-          "type": "string"
-        },
         "title": {
           "type": "string"
         }

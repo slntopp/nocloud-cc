@@ -10,6 +10,7 @@ import (
 	nograph "github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	noschema "github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -109,8 +110,6 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 	logger.Info("Creating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	chat.Owner = requestor
-
 	meta, err := ctrl.col.CreateDocument(ctx, chat)
 	if err != nil {
 		return nil, err
@@ -122,6 +121,7 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, requestor),
 		To:    driver.NewDocumentID(schema.CHATS_COL, chat.Uuid),
 		Level: access.MGMT,
+		Role:  roles.OWNER,
 	})
 	if err != nil {
 		logger.Warn("Could not link account and chat", zap.String("chat", chat.Uuid), zap.String("account", requestor), zap.Error(err))
@@ -181,7 +181,7 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 		return nil, err
 	}
 	msg.Uuid = meta.ID.Key()
-    
+
 	_, err = ctrl.acc2msg.CreateDocument(ctx, nograph.Access{
 		From:  driver.NewDocumentID(noschema.ACCOUNTS_COL, requestor),
 		To:    driver.NewDocumentID(schema.CHATS_MESSAGES_COL, msg.Uuid),
