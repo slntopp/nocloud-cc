@@ -69,6 +69,12 @@ func (s *ChatsServiceServer) SendChatMessage(ctx context.Context, req *pb.SendCh
 	if err != nil {
 		return nil, err
 	}
+	meta, err := s.cht_ctrl.FetchEntities(ctx, req.GetEntities())
+	if err != nil {
+		return nil, err
+	}
+	chat.ChatMessage.Meta = meta
+
 	return chat.ChatMessage, nil
 }
 
