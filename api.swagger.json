@@ -384,6 +384,10 @@
         },
         "message": {
           "type": "string"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
         }
       }
     },
@@ -425,6 +429,12 @@
       "properties": {
         "message": {
           "$ref": "#/definitions/chatsChatMessage"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -436,6 +446,14 @@
         }
       },
       "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
     },
     "rpcStatus": {
       "type": "object",

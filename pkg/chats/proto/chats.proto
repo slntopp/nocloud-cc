@@ -14,6 +14,7 @@ message ChatMessage{
     string from = 2;
     string to = 3;
     string message = 4;
+    map<string, google.protobuf.Value> meta = 5;
 }
 
 message ChatMessageStreamRequest {
@@ -21,6 +22,7 @@ message ChatMessageStreamRequest {
 }
 message SendChatMessageRequest {
     ChatMessage message = 1;
+    repeated string entities = 2;
 }
 message DeleteChatMessageRequest {
     string uuid = 1;
