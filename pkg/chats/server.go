@@ -65,15 +65,10 @@ func (s *ChatsServiceServer) Update(ctx context.Context, chat *pb.Chat) (*pb.Cha
 
 func (s *ChatsServiceServer) SendChatMessage(ctx context.Context, req *pb.SendChatMessageRequest) (*pb.ChatMessage, error) {
 	s.log.Info("Got SendChatMessage Request", zap.Any("request", req))
-	chat, err := s.msg_ctrl.Create(ctx, req.Message)
+	chat, err := s.msg_ctrl.Create(ctx, req.GetMessage(), req.GetEntities())
 	if err != nil {
 		return nil, err
 	}
-	meta, err := s.cht_ctrl.FetchEntities(ctx, req.GetEntities())
-	if err != nil {
-		return nil, err
-	}
-	chat.ChatMessage.Meta = meta
 
 	return chat.ChatMessage, nil
 }

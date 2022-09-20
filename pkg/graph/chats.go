@@ -164,7 +164,7 @@ func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *chatpb.Invi
 	return err
 }
 
-func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.ChatMessage) (*ChatMessage, error) {
+func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.ChatMessage, entities []string) (*ChatMessage, error) {
 	logger := ctrl.log.Named("CreateChatMessage")
 	logger.Info("Creating message", zap.Any("message", msg))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -190,6 +190,12 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 	if err != nil {
 		logger.Warn("Could not link account and message", zap.String("account", requestor), zap.String("message", msg.Uuid))
 	}
+
+	md, err := ctrl.FetchEntities(ctx, entities)
+	if err != nil {
+		return nil, err
+	}
+	msg.Meta = md
 
 	return &ChatMessage{msg, meta}, nil
 }

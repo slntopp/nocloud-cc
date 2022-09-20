@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func (c *ChatsController) FetchEntities(ctx context.Context, entities []string) (map[string]*structpb.Value, error) {
+func (c *ChatsMessagesController) FetchEntities(ctx context.Context, entities []string) (map[string]*structpb.Value, error) {
 	result := make(map[string]*structpb.Value)
 	for _, entity := range entities {
 		document, err := GetByDocumentId(ctx, c.db, entity)
