@@ -74,7 +74,6 @@ func NewChatsMessagesController(logger *zap.Logger, db driver.Database) ChatsMes
 func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) {
 	logger := ctrl.log.Named("GetChat")
 	logger.Info("Getting chat", zap.String("id", id))
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	chat := &proto.Chat{}
 	meta, err := ctrl.col.ReadDocument(ctx, id, chat)
@@ -83,7 +82,7 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 	}
 	chat.Uuid = meta.ID.Key()
 
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, id, access.READ) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, id, access.READ) {
 		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -94,9 +93,8 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
 	logger := ctrl.log.Named("DeleteChat")
 	logger.Info("Deleting chat", zap.String("id", id))
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, id, access.MGMT) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, id, access.MGMT) {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -134,9 +132,7 @@ func (ctrl *ChatsController) Update(ctx context.Context, chat *chatpb.Chat) erro
 	logger := ctrl.log.Named("UpdateChat")
 	logger.Info("Updating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, requestor, chat.GetUuid(), access.MGMT) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, chat.GetUuid(), access.MGMT) {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -148,10 +144,7 @@ func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *chatpb.Invi
 	logger := ctrl.log.Named("InviteUser")
 	logger.Info("Inviting user to chat", zap.String("chat", invite.GetChatUuid()), zap.String("user", invite.GetUserUuid()))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
-		requestor, invite.GetChatUuid(), access.READ) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, invite.GetChatUuid(), access.READ) {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -171,8 +164,7 @@ func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.Cha
 
 	msg.From = requestor
 
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
-		requestor, msg.GetTo(), access.READ) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, msg.GetTo(), access.READ) {
 		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -204,10 +196,7 @@ func (ctrl *ChatsMessagesController) Get(ctx context.Context, id string) (*ChatM
 	logger := ctrl.log.Named("GetChatMessage")
 	logger.Info("Getting chat message", zap.String("id", id))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
-		requestor, id, access.READ) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG, id, access.READ) {
 		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 	msg := &chatpb.ChatMessage{}
@@ -224,10 +213,7 @@ func (ctrl *ChatsMessagesController) Delete(ctx context.Context, id string) erro
 	logger := ctrl.log.Named("DeleteChatMessage")
 	logger.Info("Deleting message", zap.String("id", id))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
-		requestor, id, access.MGMT) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG, id, access.MGMT) {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 	_, err := ctrl.col.RemoveDocument(ctx, id)
@@ -238,10 +224,7 @@ func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.Cha
 	logger := ctrl.log.Named("UpdateChatMessage")
 	logger.Info("Updating message", zap.String("id", msg.GetUuid()), zap.Any("message", msg))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG,
-		requestor, msg.GetUuid(), access.MGMT) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG, msg.GetUuid(), access.MGMT) {
 		return status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 
@@ -258,10 +241,7 @@ func (ctrl *ChatsMessagesController) List(ctx context.Context, req *chatpb.ListC
 	logger := ctrl.log.Named("ListChatMessages")
 	logger.Info("Fetching messages", zap.String("chat", req.GetChatUuid()))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS,
-		requestor, req.GetChatUuid(), access.READ) {
+	if !HasAccess(ctx, ctrl.db, schema.ACC2CHTS, req.GetChatUuid(), access.READ) {
 		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
 

@@ -8,6 +8,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
 	github.com/slntopp/nocloud v0.0.15-r17
 	github.com/spf13/viper v1.13.0
+	github.com/streadway/amqp v1.0.0
 	go.uber.org/zap v1.23.0
 	google.golang.org/genproto v0.0.0-20220908141613-51c1cc9bc6d0
 	google.golang.org/grpc v1.49.0
@@ -16,6 +17,7 @@ require (
 
 require (
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
+	github.com/cskr/pubsub v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

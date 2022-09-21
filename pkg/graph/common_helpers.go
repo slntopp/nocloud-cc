@@ -59,14 +59,15 @@ FOR edge IN @@collection
     RETURN edge
 `
 
-func HasAccess(ctx context.Context, db driver.Database, collection, fromKey, toKey string, level int32) bool {
+func HasAccess(ctx context.Context, db driver.Database, collection, node string, level int32) bool {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	collections := strings.Split(collection, "2")
 	if len(collections) != 2 {
 		return false
 	}
 
-	fromDocID := driver.NewDocumentID(collections[0], fromKey)
-	toDocID := driver.NewDocumentID(collections[1], toKey)
+	fromDocID := driver.NewDocumentID(collections[0], requestor)
+	toDocID := driver.NewDocumentID(collections[1], node)
 
 	c, err := db.Query(ctx, edgeQuery, map[string]interface{}{
 		"@collection": collection,

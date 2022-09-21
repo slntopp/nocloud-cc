@@ -2,8 +2,10 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud-cc/pkg/broker"
 	pb "github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud-cc/pkg/graph"
 	"go.uber.org/zap"
@@ -11,6 +13,7 @@ import (
 
 type ChatsServiceServer struct {
 	pb.UnimplementedChatServiceServer
+	db       driver.Database
 	cht_ctrl graph.ChatsController
 	msg_ctrl graph.ChatsMessagesController
 	log      *zap.Logger
@@ -21,6 +24,7 @@ func NewChatsServer(log *zap.Logger, db driver.Database) *ChatsServiceServer {
 	chatsController := graph.NewChatsController(logger, db)
 	messagesController := graph.NewChatsMessagesController(logger, db)
 	return &ChatsServiceServer{
+		db:       db,
 		log:      logger,
 		cht_ctrl: chatsController,
 		msg_ctrl: messagesController,
@@ -65,12 +69,15 @@ func (s *ChatsServiceServer) Update(ctx context.Context, chat *pb.Chat) (*pb.Cha
 
 func (s *ChatsServiceServer) SendChatMessage(ctx context.Context, req *pb.SendChatMessageRequest) (*pb.ChatMessage, error) {
 	s.log.Info("Got SendChatMessage Request", zap.Any("request", req))
-	chat, err := s.msg_ctrl.Create(ctx, req.GetMessage(), req.GetEntities())
+	msg, err := s.msg_ctrl.Create(ctx, req.GetMessage(), req.GetEntities())
 	if err != nil {
 		return nil, err
 	}
-
-	return chat.ChatMessage, nil
+	go func() {
+		pub := broker.CreateChatExchange(req.Message.To)
+		pub(msg.ChatMessage)
+	}()
+	return msg.ChatMessage, nil
 }
 
 func (s *ChatsServiceServer) GetChatMessage(ctx context.Context, req *pb.GetChatMessageRequest) (*pb.ChatMessage, error) {
@@ -119,6 +126,24 @@ func (s *ChatsServiceServer) ListChatMessages(ctx context.Context, req *pb.ListC
 
 func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.ChatService_StreamServer) error {
 	s.log.Info("Got ChatMessageStream Request", zap.Any("request", req))
+	uuid := req.GetUuid()
+	ctx := stream.Context()
+	s.log.Info("token", zap.String("token", ctx.Value("authorization").(string)))
+
+	// requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	// if !graph.HasAccess(ctx, s.db, schema.ACC2CHTS, requestor, uuid, access.READ) {
+	// 	return status.Error(codes.PermissionDenied, "Not enough access to subscribe to chat")
+	// }
+
+	msgs := broker.MessageConsumer(uuid)
+
+	for msg := range msgs {
+		s.log.Info("Unmarshaling incoming message")
+		chatMessage := &pb.ChatMessage{}
+		json.Unmarshal(msg.Body, chatMessage)
+		stream.Send(chatMessage)
+	}
 
 	return nil
 }

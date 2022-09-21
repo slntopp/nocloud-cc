@@ -6,12 +6,14 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/slntopp/nocloud-cc/pkg/broker"
 	"github.com/slntopp/nocloud-cc/pkg/chats"
 	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -20,9 +22,10 @@ var (
 	port string
 	log  *zap.Logger
 
-	arangodbHost string
-	arangodbCred string
-	SIGNING_KEY  []byte
+	rbmqConnectionString string
+	arangodbHost         string
+	arangodbCred         string
+	SIGNING_KEY          []byte
 )
 
 func init() {
@@ -36,6 +39,9 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	rbmqConnectionString = viper.GetString("RABBITMQ_CONN")
 
 	port = viper.GetString("PORT")
 
@@ -51,6 +57,15 @@ func main() {
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
+
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmqConnectionString))
+	rbmq, err := amqp.Dial(rbmqConnectionString)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
+
+	broker.Configure(log, rbmq)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
