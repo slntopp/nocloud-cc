@@ -8,7 +8,11 @@ import (
 	"github.com/slntopp/nocloud-cc/pkg/broker"
 	pb "github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud-cc/pkg/graph"
+	"github.com/slntopp/nocloud-cc/pkg/schema"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ChatsServiceServer struct {
@@ -127,14 +131,11 @@ func (s *ChatsServiceServer) ListChatMessages(ctx context.Context, req *pb.ListC
 func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.ChatService_StreamServer) error {
 	s.log.Info("Got ChatMessageStream Request", zap.Any("request", req))
 	uuid := req.GetUuid()
-	ctx := stream.Context()
-	s.log.Info("token", zap.String("token", ctx.Value("authorization").(string)))
 
-	// requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	// if !graph.HasAccess(ctx, s.db, schema.ACC2CHTS, requestor, uuid, access.READ) {
-	// 	return status.Error(codes.PermissionDenied, "Not enough access to subscribe to chat")
-	// }
+	if !graph.HasAccess(stream.Context(), s.db, schema.ACC2CHTS, uuid, access.READ) {
+		s.log.Warn("Access check failed", zap.Any("context", stream.Context()))
+		return status.Error(codes.PermissionDenied, "Not enough access to subscribe to chat")
+	}
 
 	msgs := broker.MessageConsumer(uuid)
 

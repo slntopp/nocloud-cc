@@ -78,6 +78,9 @@ func main() {
 			grpc_zap.UnaryServerInterceptor(log),
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc.StreamServerInterceptor(auth.JWT_STREAM_INTERCEPTOR),
+		)),
 	)
 	proto.RegisterChatServiceServer(s, chats.NewChatsServer(log, db))
 

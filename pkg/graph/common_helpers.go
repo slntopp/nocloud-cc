@@ -60,7 +60,13 @@ FOR edge IN @@collection
 `
 
 func HasAccess(ctx context.Context, db driver.Database, collection, node string, level int32) bool {
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	payload := ctx.Value(nocloud.NoCloudAccount)
+	if payload == nil {
+		return false
+	}
+	requestor := payload.(string)
+
 	collections := strings.Split(collection, "2")
 	if len(collections) != 2 {
 		return false
