@@ -77,7 +77,9 @@ func (s *ChatsServiceServer) SendChatMessage(ctx context.Context, req *pb.SendCh
 	if err != nil {
 		return nil, err
 	}
-	GetChatPub(msg.To)(msg.ChatMessage)
+	if err := GetChatPub(msg.To)(msg.ChatMessage); err != nil {
+		s.log.Warn("Error while publishing message", zap.Error(err))
+	}
 
 	return msg.ChatMessage, nil
 }
@@ -135,7 +137,7 @@ func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.
 		return status.Error(codes.PermissionDenied, "Not enough access to subscribe to chat")
 	}
 
-	msgs, err := broker.GetConsumer(uuid)
+	msgs, err := broker.GetConsumer(stream.Context(), uuid)
 	if err != nil {
 		return err
 	}
