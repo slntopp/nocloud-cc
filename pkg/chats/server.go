@@ -77,10 +77,8 @@ func (s *ChatsServiceServer) SendChatMessage(ctx context.Context, req *pb.SendCh
 	if err != nil {
 		return nil, err
 	}
-	go func() {
-		pub := broker.CreateChatExchange(req.Message.To)
-		pub(msg.ChatMessage)
-	}()
+	GetChatPub(msg.To)(msg.ChatMessage)
+
 	return msg.ChatMessage, nil
 }
 
