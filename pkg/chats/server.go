@@ -135,7 +135,10 @@ func (s *ChatsServiceServer) Stream(req *pb.ChatMessageStreamRequest, stream pb.
 		return status.Error(codes.PermissionDenied, "Not enough access to subscribe to chat")
 	}
 
-	msgs := broker.MessageConsumer(uuid)
+	msgs, err := broker.GetConsumer(uuid)
+	if err != nil {
+		return err
+	}
 
 	for msg := range msgs {
 		s.log.Info("Unmarshaling incoming message")
