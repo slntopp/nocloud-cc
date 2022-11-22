@@ -8,7 +8,7 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud-cc/pkg/broker"
 	"github.com/slntopp/nocloud-cc/pkg/chats"
-	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
+	proto "github.com/slntopp/nocloud-proto/cc"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"

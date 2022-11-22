@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud-cc/pkg/chats/proto"
-	chatpb "github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud-cc/pkg/schema"
+	pb "github.com/slntopp/nocloud-proto/cc"
 	nograph "github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
@@ -18,7 +17,7 @@ import (
 )
 
 type Chat struct {
-	*chatpb.Chat
+	*pb.Chat
 	driver.DocumentMeta
 }
 type ChatsController struct {
@@ -30,7 +29,7 @@ type ChatsController struct {
 }
 
 type ChatMessage struct {
-	*chatpb.ChatMessage
+	*pb.ChatMessage
 	driver.DocumentMeta
 }
 
@@ -75,7 +74,7 @@ func (ctrl *ChatsController) Get(ctx context.Context, id string) (*Chat, error) 
 	logger := ctrl.log.Named("GetChat")
 	logger.Info("Getting chat", zap.String("id", id))
 
-	chat := &proto.Chat{}
+	chat := &pb.Chat{}
 	meta, err := ctrl.col.ReadDocument(ctx, id, chat)
 	if err != nil {
 		return nil, err
@@ -103,7 +102,7 @@ func (ctrl *ChatsController) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Chat, error) {
+func (ctrl *ChatsController) Create(ctx context.Context, chat *pb.Chat) (*Chat, error) {
 	logger := ctrl.log.Named("CreatingChat")
 	logger.Info("Creating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -128,7 +127,7 @@ func (ctrl *ChatsController) Create(ctx context.Context, chat *chatpb.Chat) (*Ch
 	return &Chat{chat, meta}, nil
 }
 
-func (ctrl *ChatsController) Update(ctx context.Context, chat *chatpb.Chat) error {
+func (ctrl *ChatsController) Update(ctx context.Context, chat *pb.Chat) error {
 	logger := ctrl.log.Named("UpdateChat")
 	logger.Info("Updating chat", zap.String("id", chat.GetUuid()), zap.Any("chat", chat))
 
@@ -140,7 +139,7 @@ func (ctrl *ChatsController) Update(ctx context.Context, chat *chatpb.Chat) erro
 	return err
 }
 
-func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *chatpb.InviteChatRequest) error {
+func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *pb.InviteChatRequest) error {
 	logger := ctrl.log.Named("InviteUser")
 	logger.Info("Inviting user to chat", zap.String("chat", invite.GetChatUuid()), zap.String("user", invite.GetUserUuid()))
 
@@ -157,7 +156,7 @@ func (ctrl *ChatsController) InviteUser(ctx context.Context, invite *chatpb.Invi
 	return err
 }
 
-func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *chatpb.ChatMessage, entities []string) (*ChatMessage, error) {
+func (ctrl *ChatsMessagesController) Create(ctx context.Context, msg *pb.ChatMessage, entities []string) (*ChatMessage, error) {
 	logger := ctrl.log.Named("CreateChatMessage")
 	logger.Info("Creating message", zap.Any("message", msg))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -199,7 +198,7 @@ func (ctrl *ChatsMessagesController) Get(ctx context.Context, id string) (*ChatM
 	if !HasAccess(ctx, ctrl.db, schema.ACC2MSG, id, access.READ) {
 		return nil, status.Error(codes.PermissionDenied, "Permission Denied")
 	}
-	msg := &chatpb.ChatMessage{}
+	msg := &pb.ChatMessage{}
 	meta, err := ctrl.col.ReadDocument(ctx, id, msg)
 	if err != nil {
 		return nil, err
@@ -220,7 +219,7 @@ func (ctrl *ChatsMessagesController) Delete(ctx context.Context, id string) erro
 	return err
 }
 
-func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *chatpb.ChatMessage) error {
+func (ctrl *ChatsMessagesController) Update(ctx context.Context, msg *pb.ChatMessage) error {
 	logger := ctrl.log.Named("UpdateChatMessage")
 	logger.Info("Updating message", zap.String("id", msg.GetUuid()), zap.Any("message", msg))
 
@@ -237,7 +236,7 @@ FOR message IN @@collection
     FILTER message.to == @chat 
     RETURN message`
 
-func (ctrl *ChatsMessagesController) List(ctx context.Context, req *chatpb.ListChatMessagesRequest) ([]*chatpb.ChatMessage, error) {
+func (ctrl *ChatsMessagesController) List(ctx context.Context, req *pb.ListChatMessagesRequest) ([]*pb.ChatMessage, error) {
 	logger := ctrl.log.Named("ListChatMessages")
 	logger.Info("Fetching messages", zap.String("chat", req.GetChatUuid()))
 
@@ -253,9 +252,9 @@ func (ctrl *ChatsMessagesController) List(ctx context.Context, req *chatpb.ListC
 		return nil, err
 	}
 
-	messages := []*proto.ChatMessage{}
+	messages := []*pb.ChatMessage{}
 	for {
-		message := &proto.ChatMessage{}
+		message := &pb.ChatMessage{}
 		_, err = c.ReadDocument(ctx, message)
 
 		if err != nil {

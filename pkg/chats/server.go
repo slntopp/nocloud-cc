@@ -6,9 +6,9 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-cc/pkg/broker"
-	pb "github.com/slntopp/nocloud-cc/pkg/chats/proto"
 	"github.com/slntopp/nocloud-cc/pkg/graph"
 	"github.com/slntopp/nocloud-cc/pkg/schema"
+	pb "github.com/slntopp/nocloud-proto/cc"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
